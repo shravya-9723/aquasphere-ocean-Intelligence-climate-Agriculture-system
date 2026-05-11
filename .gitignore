@@ -205,7 +205,7 @@ marimo/_lsp/
 __marimo__/
 
 # Rag Bot
-data/
+#data/
 temp/
 node_modules
 .next/

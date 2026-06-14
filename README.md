@@ -4,7 +4,7 @@
 
 *Geospatial visualization · Environmental analytics · Retrieval-Augmented AI*
 
-🌐 **Live Demo:** [aquasphere-frontend.vercel.app/login](https://aquasphere-frontend.vercel.app/login)
+🌐 **Live Demo:** [aquasphere-intelligence.vercel.app/login](https://aquasphere-intelligence-delta.vercel.app/login)
 
 ---
 

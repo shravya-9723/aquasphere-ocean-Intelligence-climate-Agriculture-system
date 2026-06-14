@@ -78,7 +78,7 @@ export default function MapCanvasLeaflet({
   mode = "map",
 }: MapCanvasLeafletProps) {
   const [hovered, setHovered] = useState<MapDatum | null>(null);
-  const points = data?.agriculture ?? [];
+  const points = useMemo(() => data?.agriculture ?? [], [data]);
 
   const pointByCountry = useMemo(() => new Map(points.map((point) => [point.country, point])), [points]);
   const tradeRoutes = useMemo(

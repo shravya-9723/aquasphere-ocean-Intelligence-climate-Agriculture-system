@@ -5,14 +5,46 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import dynamic from "next/dynamic";
+import { AuthError, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 import { postJson } from "@/lib/api";
+import { firebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import type { Profile } from "@/lib/types";
 
 
 const ClimateScene = dynamic(() => import("@/components/climate-scene"), {
   ssr: false,
 });
+
+function firebaseErrorMessage(error: unknown) {
+  const code = (error as AuthError)?.code;
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "This email is already registered. Switch to Login.";
+    case "auth/invalid-email":
+      return "Enter a valid email address.";
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Invalid email or password.";
+    case "auth/weak-password":
+      return "Password should be at least 6 characters.";
+    case "auth/network-request-failed":
+      return "Firebase network request failed. Check internet connection and Firebase authorized domains.";
+    default:
+      return error instanceof Error ? error.message : "Firebase authentication failed.";
+  }
+}
+
+async function authenticateWithFirebase(mode: "login" | "register", email: string, password: string) {
+  if (!isFirebaseConfigured || !firebaseAuth) {
+    throw new Error("Firebase is not configured. Check frontend/.env.local and restart the dev server.");
+  }
+
+  return mode === "register"
+    ? createUserWithEmailAndPassword(firebaseAuth, email, password)
+    : signInWithEmailAndPassword(firebaseAuth, email, password);
+}
 
 async function syncLocalProfile(mode: "login" | "register", email: string, password: string, fullName: string, organization: string) {
   if (mode === "register") {
@@ -72,8 +104,9 @@ export default function LoginPage() {
     event.preventDefault();
     setBusy(true);
     setError(null);
-    setStatus("Signing in...");
+    setStatus(mode === "login" ? "Signing in with Firebase..." : "Creating Firebase account...");
     try {
+      await authenticateWithFirebase(mode, email, password);
       setStatus("Syncing profile...");
       let profile: Profile;
       try {
@@ -84,7 +117,7 @@ export default function LoginPage() {
       localStorage.setItem("aquasphere-profile", JSON.stringify(profile));
       router.push("/map" as Route);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      setError(firebaseErrorMessage(err));
     } finally {
       setStatus(null);
       setBusy(false);
@@ -104,7 +137,7 @@ export default function LoginPage() {
               AquaSphere: Ocean-Climate-Agriculture Intelligence System
             </h1>
             <p className="mt-5 max-w-xl text-base leading-8 text-cyan-50/72">
-              Login can use Firebase Auth when configured, while AquaSphere keeps profile, saved insights, and chat memory in the local backend.
+              Firebase handles authentication, while AquaSphere keeps profile, saved insights, and chat memory in the backend.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <PromoCard title="World Map Hub" text="Jump into a normal world map with regional ocean and trade signals." />
@@ -133,6 +166,12 @@ export default function LoginPage() {
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {!isFirebaseConfigured ? (
+                <div className="rounded-2xl border border-orange-300/20 bg-orange-300/10 p-4 text-sm text-orange-100">
+                  Firebase is not configured. Add the NEXT_PUBLIC_FIREBASE_* values and restart the frontend.
+                </div>
+              ) : null}
+
               {mode === "register" ? (
                 <>
                   <Field label="Full name" value={fullName} onChange={setFullName} />
@@ -159,8 +198,8 @@ export default function LoginPage() {
                 </div>
               ) : null}
 
-              <button className="sea-button w-full rounded-full px-5 py-3 text-sm font-semibold" disabled={busy} type="submit">
-                {busy ? "Please wait..." : mode === "login" ? "Enter AquaSphere" : "Create profile"}
+              <button className="sea-button w-full rounded-full px-5 py-3 text-sm font-semibold" disabled={busy || !isFirebaseConfigured} type="submit">
+                {busy ? "Please wait..." : mode === "login" ? "Login with Firebase" : "Create Firebase account"}
               </button>
             </form>
           </section>

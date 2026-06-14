@@ -61,7 +61,7 @@ function buildTradeRoute(source: MapDatum, target: MapDatum) {
 
 export function MapCanvas({ data, selectedRegion, onSelectRegion, mode = "map" }: MapCanvasProps) {
   const [hovered, setHovered] = useState<MapDatum | null>(null);
-  const points = data?.agriculture ?? [];
+  const points = useMemo(() => data?.agriculture ?? [], [data]);
 
   const pointByCountry = useMemo(() => new Map(points.map((point) => [point.country, point])), [points]);
   const activePoint = selectedRegion ? pointByCountry.get(selectedRegion) ?? null : null;

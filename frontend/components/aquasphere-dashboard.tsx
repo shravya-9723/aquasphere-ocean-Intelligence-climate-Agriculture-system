@@ -929,7 +929,7 @@ function TradeWorkspace({
             <h3 className="mt-2 text-2xl font-semibold text-white">1000 to 2026 trade evolution</h3>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-cyan-50/72">
               This is historical interpretation, separate from the modern climate dataset. It explains how ocean routes,
-              plantations, ports, and climate risk evolved into today's trade intelligence.
+              plantations, ports, and climate risk evolved into today&apos;s trade intelligence.
             </p>
           </div>
           <div className="rounded-[20px] border border-cyan-100/10 bg-slate-950/25 p-4 text-right">

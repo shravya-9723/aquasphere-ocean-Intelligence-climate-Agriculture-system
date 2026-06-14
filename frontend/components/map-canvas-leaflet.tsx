@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, Polyline, TileLayer } from "react-leaflet";
 
 import type { MapDatum, MapResponse } from "@/lib/types";
+import type { ReactNode } from "react";
 
 
 interface MapCanvasLeafletProps {
@@ -22,6 +23,38 @@ const TRADE_CONNECTIONS: [string, string][] = [
 ];
 
 type MapPosition = [number, number];
+const DEFAULT_CENTER: MapPosition = [20, 0];
+const TypedMapContainer = MapContainer as unknown as (props: {
+  center: MapPosition;
+  zoom: number;
+  scrollWheelZoom: boolean;
+  className: string;
+  children: ReactNode;
+}) => JSX.Element;
+const TypedTileLayer = TileLayer as unknown as (props: {
+  attribution: string;
+  url: string;
+}) => JSX.Element;
+const TypedPolyline = Polyline as unknown as (props: {
+  color: string;
+  opacity: number;
+  positions: [MapPosition, MapPosition];
+  weight: number;
+}) => JSX.Element;
+const TypedCircleMarker = CircleMarker as unknown as (props: {
+  center: MapPosition;
+  eventHandlers: {
+    click: () => void;
+    mouseover: () => void;
+    mouseout: () => void;
+  };
+  fillColor: string;
+  fillOpacity: number;
+  pathOptions: { color: string };
+  radius: number;
+  weight: number;
+  children: ReactNode;
+}) => JSX.Element;
 
 
 function getMarkerColor(point: MapDatum, selectedRegion: string | null) {
@@ -121,15 +154,15 @@ export default function MapCanvasLeaflet({
       </div>
 
       <div className="h-[580px] overflow-hidden rounded-[32px]">
-        <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom className="h-full w-full">
-          <TileLayer
+        <TypedMapContainer center={DEFAULT_CENTER} zoom={2} scrollWheelZoom={true} className="h-full w-full">
+          <TypedTileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
           {mode === "trade"
             ? tradeRoutes.map((positions, index) => (
-                <Polyline
+                <TypedPolyline
                   key={`${positions[0].toString()}-${index}`}
                   color="#5ed4ff"
                   opacity={0.75}
@@ -140,9 +173,9 @@ export default function MapCanvasLeaflet({
             : null}
 
           {points.map((point) => (
-            <CircleMarker
+            <TypedCircleMarker
               key={`${point.country}-${point.crop}-${point.year}`}
-              center={[point.latitude, point.longitude]}
+              center={[point.latitude, point.longitude] as MapPosition}
               eventHandlers={{
                 click: () => onSelectRegion(point.country),
                 mouseover: () => setHovered(point),
@@ -164,9 +197,9 @@ export default function MapCanvasLeaflet({
                   <div>Yield: {point.yield_tons.toFixed(1)} t</div>
                 </div>
               </Popup>
-            </CircleMarker>
+            </TypedCircleMarker>
           ))}
-        </MapContainer>
+        </TypedMapContainer>
       </div>
 
       {hovered ? (

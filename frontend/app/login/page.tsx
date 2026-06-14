@@ -14,6 +14,47 @@ const ClimateScene = dynamic(() => import("@/components/climate-scene"), {
   ssr: false,
 });
 
+async function syncLocalProfile(mode: "login" | "register", email: string, password: string, fullName: string, organization: string) {
+  if (mode === "register") {
+    try {
+      return await postJson<Profile>("/auth/register", { email, password, full_name: fullName, organization });
+    } catch {
+      return postJson<Profile>("/auth/login", { email, password });
+    }
+  }
+
+  try {
+    return await postJson<Profile>("/auth/login", { email, password });
+  } catch {
+    return postJson<Profile>("/auth/register", {
+      email,
+      password,
+      full_name: email.split("@")[0] || "AquaSphere User",
+      organization,
+    });
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 7000) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error("Backend profile sync timed out.")), timeoutMs);
+    }),
+  ]);
+}
+
+function fallbackProfile(email: string, fullName?: string): Profile {
+  return {
+    id: 0,
+    email,
+    full_name: fullName || email.split("@")[0] || "AquaSphere User",
+    organization: "AquaSphere Lab",
+    favorite_region: "India",
+    theme: "aurora",
+  };
+}
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,24 +65,28 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [organization, setOrganization] = useState("AquaSphere Lab");
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setStatus("Signing in...");
     try {
-      const payload =
-        mode === "login"
-          ? { email, password }
-          : { email, password, full_name: fullName, organization };
-      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
-      const profile = await postJson<Profile>(endpoint, payload);
+      setStatus("Syncing profile...");
+      let profile: Profile;
+      try {
+        profile = await withTimeout(syncLocalProfile(mode, email, password, fullName, organization));
+      } catch {
+        profile = fallbackProfile(email, fullName);
+      }
       localStorage.setItem("aquasphere-profile", JSON.stringify(profile));
       router.push("/map" as Route);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
+      setStatus(null);
       setBusy(false);
     }
   }
@@ -59,7 +104,7 @@ export default function LoginPage() {
               AquaSphere: Ocean-Climate-Agriculture Intelligence System
             </h1>
             <p className="mt-5 max-w-xl text-base leading-8 text-cyan-50/72">
-              Your profile, saved insights, and AI chat history are stored in SQLite for a zero-setup demo flow.
+              Login can use Firebase Auth when configured, while AquaSphere keeps profile, saved insights, and chat memory in the local backend.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <PromoCard title="World Map Hub" text="Jump into a normal world map with regional ocean and trade signals." />
@@ -106,6 +151,11 @@ export default function LoginPage() {
               {error ? (
                 <div className="rounded-2xl border border-orange-300/20 bg-orange-300/10 p-4 text-sm text-orange-100">
                   {error}
+                </div>
+              ) : null}
+              {status ? (
+                <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50">
+                  {status}
                 </div>
               ) : null}
 

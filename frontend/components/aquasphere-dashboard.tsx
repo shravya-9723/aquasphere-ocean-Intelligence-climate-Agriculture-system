@@ -2,6 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
@@ -211,6 +212,7 @@ function downloadDoc(filename: string, title: string, intro: string, rows: Array
 
 
 export function AquaSphereDashboard({ activeSection }: { activeSection: string }) {
+  const router = useRouter();
   const [year, setYear] = useState(2020);
   const [selectedRegion, setSelectedRegion] = useState<string>("India");
   const [aiRegionEnabled, setAiRegionEnabled] = useState(false);
@@ -333,6 +335,15 @@ export function AquaSphereDashboard({ activeSection }: { activeSection: string }
     setSaveMessage("Profile updated.");
   }
 
+  function handleLogout() {
+    localStorage.removeItem("aquasphere-profile");
+    localStorage.removeItem("aquasphere-firebase-session");
+    localStorage.removeItem("aquasphere-selected-region");
+    setProfile(null);
+    setAiRegionEnabled(false);
+    router.push("/login" as Route);
+  }
+
   return (
     <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1580px] flex-col gap-6 px-4 py-4 md:px-6 lg:px-8">
       <header className="glass-panel rounded-[28px] px-5 py-4 shadow-glow">
@@ -364,6 +375,11 @@ export function AquaSphereDashboard({ activeSection }: { activeSection: string }
               <Link className="rounded-full border border-cyan-100/10 bg-white/5 px-3 py-2 text-sm" href={"/profile" as Route}>
                 Profile
               </Link>
+              {profile ? (
+                <button className="rounded-full border border-orange-200/20 bg-orange-300/10 px-3 py-2 text-sm text-orange-50" onClick={handleLogout} type="button">
+                  Logout
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -415,6 +431,11 @@ export function AquaSphereDashboard({ activeSection }: { activeSection: string }
             <Link className="mt-3 inline-block rounded-full border border-cyan-100/10 bg-white/5 px-4 py-2 text-sm" href={(profile ? "/profile" : "/login") as Route}>
               {profile ? "Open profile" : "Go to login"}
             </Link>
+            {profile ? (
+              <button className="ml-2 mt-3 rounded-full border border-orange-200/20 bg-orange-300/10 px-4 py-2 text-sm text-orange-50" onClick={handleLogout} type="button">
+                Logout
+              </button>
+            ) : null}
           </div>
         </aside>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -27,3 +27,13 @@ const app = isFirebaseConfigured
   : null;
 
 export const firebaseAuth = app ? getAuth(app) : null;
+
+export async function signInWithGoogle() {
+  if (!firebaseAuth) {
+    throw new Error("Firebase is not configured. Check frontend/.env.local and restart the dev server.");
+  }
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  return signInWithPopup(firebaseAuth, provider);
+}

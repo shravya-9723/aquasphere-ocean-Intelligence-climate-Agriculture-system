@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { AuthError, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 import { postJson } from "@/lib/api";
-import { firebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { firebaseAuth, isFirebaseConfigured, signInWithGoogle } from "@/lib/firebase";
 import type { Profile } from "@/lib/types";
 
 
@@ -124,6 +124,44 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setBusy(true);
+    setError(null);
+    setStatus("Opening Google sign-in...");
+    try {
+      const result = await signInWithGoogle();
+      const user = result.user;
+      const profileEmail = user.email ?? `${user.uid}@firebase.local`;
+      const profileName = user.displayName ?? profileEmail.split("@")[0] ?? "AquaSphere User";
+      const localPassword = `firebase-${user.uid.slice(0, 24)}`;
+      setStatus("Syncing profile...");
+
+      let profile: Profile;
+      try {
+        profile = await withTimeout(syncLocalProfile("register", profileEmail, localPassword, profileName, organization));
+      } catch {
+        profile = fallbackProfile(profileEmail, profileName);
+      }
+
+      localStorage.setItem("aquasphere-profile", JSON.stringify(profile));
+      localStorage.setItem(
+        "aquasphere-firebase-session",
+        JSON.stringify({
+          email: profileEmail,
+          localId: user.uid,
+          displayName: user.displayName,
+          provider: "google.com",
+        }),
+      );
+      router.push("/map" as Route);
+    } catch (err) {
+      setError(firebaseErrorMessage(err));
+    } finally {
+      setStatus(null);
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0">
@@ -148,6 +186,22 @@ export default function LoginPage() {
           </section>
 
           <section className="glass-panel rounded-[30px] p-6 shadow-glow">
+            <div className="mb-5 rounded-[22px] border border-cyan-100/10 bg-slate-950/25 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {isFirebaseConfigured ? "Firebase Authentication active" : "Firebase not configured"}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-cyan-50/68">
+                    {isFirebaseConfigured
+                      ? "Use Google, email login, or email registration."
+                      : "Add NEXT_PUBLIC_FIREBASE_* values and restart the frontend."}
+                  </p>
+                </div>
+                <span className={`status-dot ${isFirebaseConfigured ? "bg-emerald-300 text-emerald-300" : "bg-orange-300 text-orange-300"}`} />
+              </div>
+            </div>
+
             <div className="mb-5 flex items-center gap-2">
               <button
                 className={`rounded-full px-4 py-2 text-sm ${mode === "login" ? "sea-button font-semibold" : "sea-button-secondary"}`}
@@ -171,6 +225,21 @@ export default function LoginPage() {
                   Firebase is not configured. Add the NEXT_PUBLIC_FIREBASE_* values and restart the frontend.
                 </div>
               ) : null}
+
+              <button
+                className="w-full rounded-full border border-cyan-100/15 bg-white px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+                disabled={busy || !isFirebaseConfigured}
+                onClick={handleGoogleLogin}
+                type="button"
+              >
+                Continue with Google
+              </button>
+
+              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-cyan-100/45">
+                <span className="h-px flex-1 bg-cyan-100/10" />
+                Email authentication
+                <span className="h-px flex-1 bg-cyan-100/10" />
+              </div>
 
               {mode === "register" ? (
                 <>

@@ -210,3 +210,6 @@ temp/
 node_modules
 .next/
 *.log
+frontend/.env.local
+.env.local
+.env
